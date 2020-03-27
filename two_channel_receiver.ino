@@ -10,48 +10,60 @@
  * employee) at the local, and you've found our code helpful, 
  * please buy us a round! 
  * Distributed as-is; no warranty is given.
+ * 
+ * (dpeach) Much of this code's modifications came from another
+ * SparkFun project written by Nick Poole.
+ * 
+ * The main difference for my code and Shawn's is that I am
+ * using a different h-bridge. I have the L9110S which only has
+ * VCC, GND and then 2 control pins for each motor (A1/A2,
+ * B1/B2).
+ * 
  */
 
 // Controller pins
-const int CH_1_PIN = 10;
-const int CH_2_PIN = 11;
+const int CH_1_PIN = 2;
+const int CH_2_PIN = 3;
+const int CH_3_PIN = 4;
+const int CH_4_PIN = 5;
 
 // Motor driver pins
-const int STBY_PIN = 9;
-const int AIN1_PIN = 2;
-const int AIN2_PIN = 4;
-const int APWM_PIN = 5;
-const int BIN1_PIN = 7;
-const int BIN2_PIN = 8;
-const int BPWM_PIN = 6;
+const int motorA1 = 7; // Motor A leg 1
+const int motorA2 = 8; // Motor A leg 2
+const int motorB1 = 9; // Motor B leg 1
+const int motorB2 = 10; // Motor B leg 2
 
 // Parameters
-const int deadzone = 20;  // Anything between -20 and 20 is stop
+const int deadzone = 15;  // Anything between -20 and 20 is stop
 
 void setup() {
 
   // Configure pins
-  pinMode(STBY_PIN, OUTPUT);
-  pinMode(AIN1_PIN, OUTPUT);
-  pinMode(AIN2_PIN, OUTPUT);
-  pinMode(APWM_PIN, OUTPUT);
-  pinMode(BIN1_PIN, OUTPUT);
-  pinMode(BIN2_PIN, OUTPUT);
-  pinMode(BPWM_PIN, OUTPUT);
+  pinMode(motorA1, OUTPUT);
+  pinMode(motorA2, OUTPUT);
+  pinMode(motorB1, OUTPUT);
+  pinMode(motorB2, OUTPUT);
 
-  // Enable motor driver
-  digitalWrite(STBY_PIN, HIGH);
+  // Input pins; dpeach added this based on other code
+  pinMode(CH_1_PIN, INPUT);
+  pinMode(CH_2_PIN, INPUT);
+  pinMode(CH_3_PIN, INPUT);
+  pinMode(CH_4_PIN, INPUT);
+
+  Serial.begin(9600);
 }
 
 void loop() {
 
   // Read pulse width from receiver
   int y = pulseIn(CH_2_PIN, HIGH, 25000);
-  int x = pulseIn(CH_1_PIN, HIGH, 25000);
+  int x = pulseIn(CH_4_PIN, HIGH, 25000);
 
   // Convert to PWM value (-255 to 255)
   y = pulseToPWM(y);
   x = pulseToPWM(x);
+  Serial.println(x);
+  Serial.println(y);
 
   // Mix for arcade drive
   int left = y + x;
@@ -72,48 +84,49 @@ void drive(int speed_a, int speed_b) {
 
   // Set direction for motor A
   if ( speed_a == 0 ) {
-    digitalWrite(AIN1_PIN, LOW);
-    digitalWrite(AIN2_PIN, LOW);
+    digitalWrite(motorA1, LOW);
+    digitalWrite(motorA2, LOW);
   } else if ( speed_a > 0 ) {
-    digitalWrite(AIN1_PIN, HIGH);
-    digitalWrite(AIN2_PIN, LOW);
+    digitalWrite(motorA1, HIGH);
+    digitalWrite(motorA2, LOW);
   } else {
-    digitalWrite(AIN1_PIN, LOW);
-    digitalWrite(AIN2_PIN, HIGH);
+    digitalWrite(motorA1, LOW);
+    digitalWrite(motorA2, HIGH);
   }
 
   // Set direction for motor B
   if ( speed_b == 0 ) {
-    digitalWrite(BIN1_PIN, LOW);
-    digitalWrite(BIN2_PIN, LOW);
+    digitalWrite(motorB1, LOW);
+    digitalWrite(motorB2, LOW);
   } else if ( speed_b > 0 ) {
-    digitalWrite(BIN1_PIN, HIGH);
-    digitalWrite(BIN2_PIN, LOW);
+    digitalWrite(motorB1, HIGH);
+    digitalWrite(motorB2, LOW);
   } else {
-    digitalWrite(BIN1_PIN, LOW);
-    digitalWrite(BIN2_PIN, HIGH);
+    digitalWrite(motorB1, LOW);
+    digitalWrite(motorB2, HIGH);
   }
 
   // Set speed
-  analogWrite(APWM_PIN, abs(speed_a));
-  analogWrite(BPWM_PIN, abs(speed_b));
+  analogWrite(motorA1, abs(speed_a));
+  analogWrite(motorB1, abs(speed_b));
+  
 }
 
 // Convert RC pulse value to motor PWM value
-int pulseToPWM(int pulse) {
+int pulseToPWM(int pulseIn) {
   
   // If we're receiving numbers, convert them to motor PWM
-  if ( pulse > 1000 ) {
-    pulse = map(pulse, 1000, 2000, -500, 500);
-    pulse = constrain(pulse, -255, 255);
+  if ( pulseIn > 1000 ) {
+    pulseIn = map(pulseIn, 1000, 2000, -500, 500);
+    pulseIn = constrain(pulseIn, -255, 255);
   } else {
-    pulse = 0;
+    pulseIn = 0;
   }
 
   // Anything in deadzone should stop the motor
-  if ( abs(pulse) <= deadzone ) {
-    pulse = 0;
+  if ( abs(pulseIn) <= deadzone ) {
+    pulseIn = 0;
   }
 
-  return pulse;
+  return pulseIn;
 }
